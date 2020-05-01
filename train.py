@@ -118,7 +118,7 @@ if __name__ == "__main__":
                 row_metrics = [formats[metric] % yolo.metrics.get(metric, 0) for yolo in model.yolo_layers]
                 metric_table += [[metric, *row_metrics]]
 
-            log_str += AsciiTable(metric_table).table
+            # log_str += AsciiTable(metric_table).table # don't have to show it every time
             log_str += f"\nTotal loss {loss.item()}"
 
             # Determine approximate time left for epoch

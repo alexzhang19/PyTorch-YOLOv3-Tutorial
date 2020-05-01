@@ -5,7 +5,6 @@ from utils.utils import *
 from utils.datasets import *
 
 import os
-import sys
 import time
 import datetime
 import argparse
@@ -14,7 +13,6 @@ from PIL import Image
 
 import torch
 from torch.utils.data import DataLoader
-from torchvision import datasets
 from torch.autograd import Variable
 
 import matplotlib.pyplot as plt
@@ -23,9 +21,9 @@ from matplotlib.ticker import NullLocator
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_folder", type=str, default="data/samples", help="path to dataset")
+    parser.add_argument("--image_folder", type=str, default=r"F:\dataset\SafetyHelmet\test_imgs", help="path to dataset")
     parser.add_argument("--model_def", type=str, default="config/yolov3.cfg", help="path to model definition file")
-    parser.add_argument("--weights_path", type=str, default="weights/yolov3.weights", help="path to weights file")
+    parser.add_argument("--weights_path", type=str, default="checkpoints/yolov3_ckpt_0.pth", help="path to weights file")
     parser.add_argument("--class_path", type=str, default="data/coco.names", help="path to class label file")
     parser.add_argument("--conf_thres", type=float, default=0.8, help="object confidence threshold")
     parser.add_argument("--nms_thres", type=float, default=0.4, help="iou thresshold for non-maximum suppression")
@@ -81,7 +79,7 @@ if __name__ == "__main__":
         current_time = time.time()
         inference_time = datetime.timedelta(seconds=current_time - prev_time)
         prev_time = current_time
-        print("\t+ Batch %d, Inference Time: %s" % (batch_i, inference_time))
+        print("\t+ Batch %d, Inference Time: %s" % (batch_i, inference_time), img_paths)
 
         # Save image and detections
         imgs.extend(img_paths)
@@ -136,6 +134,6 @@ if __name__ == "__main__":
         plt.axis("off")
         plt.gca().xaxis.set_major_locator(NullLocator())
         plt.gca().yaxis.set_major_locator(NullLocator())
-        filename = path.split("/")[-1].split(".")[0]
+        filename = os.path.basename(path).split(".")[0]
         plt.savefig(f"output/{filename}.png", bbox_inches="tight", pad_inches=0.0)
-        plt.close()
+        plt.close('all')

@@ -9,6 +9,7 @@
 """
 
 import os
+import glob
 import copy
 import torch
 import random
@@ -19,6 +20,9 @@ import torch.nn.functional as F
 import xml.etree.ElementTree as ET
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
+
+path = os.path
+
 
 def pad_to_square(img, pad_value):
     c, h, w = img.shape
@@ -44,14 +48,27 @@ def horisontal_flip(images, targets):
     return images, targets
 
 
-import cv2
-from alcore.transforms.transforms import ToNumpy
-from alcore.common import *
+class ImageFolder(Dataset):
+    def __init__(self, folder_path, img_size=416):
+        self.files = sorted(glob.glob("%s/*.*" % folder_path))
+        self.img_size = img_size
 
-if os_belong() == "Windows":
-    root_dir = r"F:\dataset\SafetyHelmet"
-else:
-    root_dir = None
+    def __getitem__(self, index):
+        img_path = self.files[index % len(self.files)]
+        # Extract image as PyTorch tensor
+        img = transforms.ToTensor()(Image.open(img_path))
+        # Pad to square resolution
+        img, _ = pad_to_square(img, 0)
+        # Resize
+        img = resize(img, self.img_size)
+
+        return img_path, img
+
+    def __len__(self):
+        return len(self.files)
+
+
+root_dir = r"F:\dataset\SafetyHelmet"
 
 
 class ListDataSet(Dataset):
@@ -59,7 +76,7 @@ class ListDataSet(Dataset):
                  multi_scale: bool = True, normalized_labels: bool = True):
         assert data_set in ["train", "valid"], "data_set mast in ['train', 'valid']."
 
-        items = CText(path.join(root_dir, "sets", data_set + ".txt")).read_lines()
+        items = self.read_lines(path.join(root_dir, "sets", data_set + ".txt"))
         self.img_files = [path.join(root_dir, "images", v) for v in items]
 
         assert len(self.img_files) != 0, "dir path have no img."
@@ -138,7 +155,7 @@ class ListDataSet(Dataset):
         name_path = path.join(root_dir, "names.txt")
         if not path.exists(name_path):
             raise ValueError("names file path not exists.")
-        return [v.strip() for v in CText(name_path).read_lines(is_split=False)]
+        return [v.strip() for v in self.read_lines(name_path, is_split=False)]
 
     def get_gt(self, label_path):
         tree = ET.parse(label_path)
@@ -181,53 +198,65 @@ class ListDataSet(Dataset):
         self.batch_count += 1
         return paths, imgs, targets
 
+    def read_lines(self, file_path: str, is_split: bool = False, sep: str = None) -> list:
+        lines = []
+        fp = open(file_path)
+        for item in fp.readlines():
+            if is_split:
+                lines.append(item.strip().split(sep))
+            else:
+                lines.append(item.strip())
+        fp.close()
+        lines = [v for v in lines if v]
+        return lines
+
     def __len__(self):
         return len(self.img_files)
 
 
 if __name__ == "__main__":
-    dataset = ListDataSet("train", augment=False, multi_scale=True)
-    num = len(dataset)
-    colors = random_color(11)
-
-
-    def data_set_test():
-        for i in range(num):
-            img_path, img, targets = dataset[i]
-            print(i, img_path, img.shape, np.shape(targets))
-            img = ToNumpy(trans_to_bgr=True)(img)
-            print("img:", img.shape, np.max(img), np.min(img))
-
-            rgns = []
-            h, w, _ = img.shape
-            for idx, tar in enumerate(targets):
-                [_, cls, x0, y0, w0, h0] = tar
-                rgns.append([x0, y0, w0, h0, cls])
-            rgns = xywh2xyxy(np.array(rgns), img.shape)
-            rgns = xyxy2xywh(np.array(rgns), img.shape)
-            cv2.imwrite(path.join(desktop, "xxx.jpg"), draw_rectangle(img, rgns, colors))
-
-
-    def loader_test():
-        data_loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=4,
-            shuffle=False,
-            num_workers=1,
-            pin_memory=False,
-            collate_fn=dataset.collate_fn,
-            drop_last=True
-        )
-
-        for i, data in enumerate(data_loader):
-            paths, imgs, targets = data
-            print(i, paths, imgs, targets)
-            for j in range(2):
-                print(j, data[0][j], data[1][j].shape, data[2][j])
-
-
-    # print("names:", dataset.get_names())
-
-    # data_set_test()
-    loader_test()
+    # dataset = ListDataSet("train", augment=False, multi_scale=True)
+    # num = len(dataset)
+    # colors = random_color(11)
+    #
+    #
+    # def data_set_test():
+    #     for i in range(num):
+    #         img_path, img, targets = dataset[i]
+    #         print(i, img_path, img.shape, np.shape(targets))
+    #         img = ToNumpy(trans_to_bgr=True)(img)
+    #         print("img:", img.shape, np.max(img), np.min(img))
+    #
+    #         rgns = []
+    #         h, w, _ = img.shape
+    #         for idx, tar in enumerate(targets):
+    #             [_, cls, x0, y0, w0, h0] = tar
+    #             rgns.append([x0, y0, w0, h0, cls])
+    #         rgns = xywh2xyxy(np.array(rgns), img.shape)
+    #         rgns = xyxy2xywh(np.array(rgns), img.shape)
+    #         cv2.imwrite(path.join(desktop, "xxx.jpg"), draw_rectangle(img, rgns, colors))
+    #
+    #
+    # def loader_test():
+    #     data_loader = torch.utils.data.DataLoader(
+    #         dataset,
+    #         batch_size=4,
+    #         shuffle=False,
+    #         num_workers=1,
+    #         pin_memory=False,
+    #         collate_fn=dataset.collate_fn,
+    #         drop_last=True
+    #     )
+    #
+    #     for i, data in enumerate(data_loader):
+    #         paths, imgs, targets = data
+    #         print(i, paths, imgs, targets)
+    #         for j in range(2):
+    #             print(j, data[0][j], data[1][j].shape, data[2][j])
+    #
+    #
+    # # print("names:", dataset.get_names())
+    #
+    # # data_set_test()
+    # loader_test()
     pass
