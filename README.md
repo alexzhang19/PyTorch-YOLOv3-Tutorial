@@ -9,5 +9,9 @@ PyTorch-YOLOv3代码阅读-改进。
 4. 修改matplot循环显示内存泄漏。
 
 环境安装：
+pytorch>=1.3
+torchvision>=0.5
+
+
 conda install pytorch=1.5 torchvision=0.6 cudatoolkit=10.1
 pip install opencv-python  matplotlib==2.2.4 terminaltables pillow tqdm
